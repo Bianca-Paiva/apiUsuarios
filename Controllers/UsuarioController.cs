@@ -6,13 +6,15 @@ using Microsoft.EntityFrameworkCore;
 namespace apiUsuarios.Controllers
 {
 
-    // Define como controller de API
+    // Define como controller de API (tradução humana: "Isso aqui é uma API, trate como API”)
     [ApiController]
 
     // Define a rota base como "Usuario"
     // Exemplo: /Usuario/create
     [Route("[controller]")]
 
+    // Construtor diz: “Ei sistema, me entrega a conexão com o banco.”. Isso chama injeção de dependência.
+    // Resumindo: O controller não cria o banco. Ele recebe pronto.
     public class UsuarioController : ControllerBase
     {
         // Campo privado para acessar o banco
@@ -26,13 +28,17 @@ namespace apiUsuarios.Controllers
         }
 
 
-        // =============================
-        // GET: /Usuario/getAll
-        // =============================
+        // ===================================
+        // GET (cria a rota): /Usuario/getAll
+        // ===================================
+        // Fluxo:
+        // 1. Pede a lista
+        // 2. Banco responde
+        // 3. API devolve
         [HttpGet("getAll")]
         public async Task<IActionResult> GetAllAsync()
         {
-            // Busca todos os usuários no banco
+            // Busca todos os usuários no banco (igual a um "SELECT * FROM Usuarios")
             List<Usuario> userList = await _appDbContext.Usuarios.ToListAsync();
 
             // Retorna 200 OK com a lista
@@ -40,9 +46,9 @@ namespace apiUsuarios.Controllers
         }
 
 
-        // =============================
-        // POST: /Usuario/create
-        // =============================
+        // ==========================================
+        // POST (fluxo de cadastro): /Usuario/create
+        // ==========================================
 
         // Fluxo:
         // 1. Recebe JSON
@@ -53,6 +59,7 @@ namespace apiUsuarios.Controllers
         // 6. Retorna sucesso
         [HttpPost("create")]
 
+        // [FromBody] CreateUserDTO dadosUsuario: pega os dados do usuário no json e converte para o c#.
         public async Task<IActionResult> CreateUserAsync([FromBody] CreateUserDTO dadosUsuario)
         {
             // Verifica se os dados recebidos são válidos
@@ -62,7 +69,7 @@ namespace apiUsuarios.Controllers
                 return BadRequest("Dados inválidos");
             }
 
-            // Converte o DTO em entidade Usuario
+            // Converte o DTO em entidade Usuario, ou seja, copia os dados convertidos no "[FromBody] CreateUserDTO dadosUsuario" e cola no banco de dados.
             Usuario usuarioSalvar = new Usuario
             {
                 Nome = dadosUsuario.Nome,
@@ -72,10 +79,11 @@ namespace apiUsuarios.Controllers
             };
 
             // Marca para inserção no banco
+            // Add = prepara
             _appDbContext.Usuarios.Add(usuarioSalvar);
 
             // Salva no banco
-            // SaveChanges é o que realmente grava no banco. Sem ele, nada acontece.
+            // SaveChanges = grava no banco (sem ele, nada acontece.)
             int result = await _appDbContext.SaveChangesAsync();
 
             // Se salvou corretamente:
@@ -94,6 +102,8 @@ namespace apiUsuarios.Controllers
         // =============================
         // Tenta autenticar o usuário usando email e senha.
         [HttpPost("login")]
+
+        // [FromBody] CreateUserDTO dadosUsuario: pega os dados do usuário no json e converte para o c#.
         public async Task<ActionResult> LoginAsync([FromBody] LoginDTO dadosLogin)
         {
             // Validação do DTO de login.
@@ -103,7 +113,7 @@ namespace apiUsuarios.Controllers
             }
 
             // Procura o usuário pelo email (pode retornar null).
-            // Isso vira um SELECT no banco.
+            // Isso vira um "SELECT TOP 1 * FROM Usuarios WHERE Email = '...'" no banco.
             Usuario? usuarioEncontrado = await _appDbContext.Usuarios.FirstOrDefaultAsync(usuario => usuario.Email == dadosLogin.Email);
 
             // Se não encontrar → NotFound (404)
