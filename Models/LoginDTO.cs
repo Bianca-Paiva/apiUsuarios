@@ -1,5 +1,6 @@
 ﻿namespace apiUsuarios.Models
 {
+    // DTO usado apenas para login
     public class LoginDTO
     {
         public string Email { get; set; } = string.Empty;

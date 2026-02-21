@@ -6,51 +6,63 @@ using Microsoft.EntityFrameworkCore;
 namespace apiUsuarios.Controllers
 {
 
-    // Controlador de API responsável pelas operações relacionadas a usuários.
-    // Rota base: [controller] -> "Usuario"
+    // Define como controller de API
     [ApiController]
+
+    // Define a rota base como "Usuario"
+    // Exemplo: /Usuario/create
     [Route("[controller]")]
+
     public class UsuarioController : ControllerBase
     {
-        // Contexto do aplicativo para acesso ao banco de dados (injeção pelo construtor).
+        // Campo privado para acessar o banco
         private readonly AppDbContext _appDbContext;
 
-        // Construtor que recebe uma instância de <see cref="AppDbContext"/> via injeção de dependência.
-        // <param name="appDbContext">Contexto do banco de dados.</param>
+        // Construtor recebe o contexto por injeção de dependência
         public UsuarioController(AppDbContext appDbContext)
         {
             // Atribui a instância injetada ao campo para uso nos métodos do controlador.
             _appDbContext = appDbContext;
         }
 
-        // Retorna todos os usuários cadastrados.
-        /// <returns>200 OK com a lista de usuários.</returns>
+
+        // =============================
+        // GET: /Usuario/getAll
+        // =============================
         [HttpGet("getAll")]
         public async Task<IActionResult> GetAllAsync()
         {
-            // Recupera todos os registros da tabela Usuarios de forma assíncrona.
+            // Busca todos os usuários no banco
             List<Usuario> userList = await _appDbContext.Usuarios.ToListAsync();
 
-            // Retorna a lista em um 200 OK.
+            // Retorna 200 OK com a lista
             return Ok(userList);
         }
 
 
-        // Cria um novo usuário a partir dos dados recebidos no corpo da requisição.
+        // =============================
+        // POST: /Usuario/create
+        // =============================
 
-        // <param name="dadosUsuario">DTO com os dados do usuário a ser criado.</param>
-        // <returns>200 OK quando criado com sucesso, 400 BadRequest em caso de erro.</returns>
+        // Fluxo:
+        // 1. Recebe JSON
+        // 2. Converte pra CreateUserDTO
+        // 3. Cria um Usuario
+        // 4. Adiciona no DbContext
+        // 5. Salva no banco
+        // 6. Retorna sucesso
         [HttpPost("create")]
+
         public async Task<IActionResult> CreateUserAsync([FromBody] CreateUserDTO dadosUsuario)
         {
-            // Valida o modelo de entrada (atributos de validação em CreateUserDTO).
+            // Verifica se os dados recebidos são válidos
             if (!ModelState.IsValid)
             {
                 // Retorna 400 quando algum campo obrigatório estiver inválido.
                 return BadRequest("Dados inválidos");
             }
 
-            // Mapeia o DTO para a entidade de domínio Usuario.
+            // Converte o DTO em entidade Usuario
             Usuario usuarioSalvar = new Usuario
             {
                 Nome = dadosUsuario.Nome,
@@ -59,32 +71,28 @@ namespace apiUsuarios.Controllers
                 CPF = dadosUsuario.CPF,
             };
 
-            // Marca a entidade para inserção no contexto.
+            // Marca para inserção no banco
             _appDbContext.Usuarios.Add(usuarioSalvar);
 
-            // Persiste as alterações no banco de dados de forma assíncrona.
+            // Salva no banco
+            // SaveChanges é o que realmente grava no banco. Sem ele, nada acontece.
             int result = await _appDbContext.SaveChangesAsync();
 
-            // Se houve alterações salvas (result > 0), considera-se sucesso.
+            // Se salvou corretamente:
             if (result > 0)
             {
                 return Ok("Usuário criado com sucesso");
             }
 
-            // Se não foram salvas alterações, retorna erro genérico de criação.
+            // Se não salvou:
             return BadRequest("Erro ao criar o usuário");
         }
 
+
+        // =============================
+        // POST: /Usuario/login
+        // =============================
         // Tenta autenticar o usuário usando email e senha.
-
-        // <param name="dadosLogin">DTO contendo Email e Senha.</param>
-
-        // <returns>
-        // 200 OK quando as credenciais estiverem corretas,
-        // 404 NotFound quando o usuário não existir,
-        // 401 Unauthorized quando a senha estiver incorreta,
-        // 400 BadRequest quando o modelo for inválido.
-        // </returns>
         [HttpPost("login")]
         public async Task<ActionResult> LoginAsync([FromBody] LoginDTO dadosLogin)
         {
@@ -95,22 +103,23 @@ namespace apiUsuarios.Controllers
             }
 
             // Procura o usuário pelo email (pode retornar null).
+            // Isso vira um SELECT no banco.
             Usuario? usuarioEncontrado = await _appDbContext.Usuarios.FirstOrDefaultAsync(usuario => usuario.Email == dadosLogin.Email);
 
+            // Se não encontrar → NotFound (404)
             if (usuarioEncontrado == null)
             {
-                // Se não encontrar, retorna 404 NotFound.
                 return NotFound("Usuário não encontrado");
             }
 
-            // Compara a senha enviada com a senha armazenada.
-            // Observação: para produção, use hashing + salting em vez de comparação direta.
+            // Se achar → compara senha a senha enviada com a senha armazenada:
             if (usuarioEncontrado.Senha == dadosLogin.Senha)
             {
+                // Se a senha enviada e a senha armazenada no banco de dados forem iguais, exibe a mensagem de login realizado.
                 return Ok("Login realizado");
             }
 
-            // Se a senha estiver incorreta, retorna 401 Unauthorized.
+            // Se a senha estiver diferente da armazenada no banco de dados, retorna 401 Unauthorized.
             return Unauthorized("Senha incorreta");
         }
     }

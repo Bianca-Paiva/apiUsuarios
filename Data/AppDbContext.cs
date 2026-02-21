@@ -3,14 +3,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace apiUsuarios.Data
 {
+    // Classe que representa a conexão com o banco de dados
     public class AppDbContext : DbContext
     {
-        // Construtor para injeção de dependência
+        // Construtor que recebe as configurações do banco
+        // Essa configuração vem do Program.cs
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
 
-        // Define um DbSet para a entidade Usuario, que representa a tabela de usuários no banco de dados
+        // Basicamente está dizendo: "Crie uma tabela chamada Usuarios baseada na classe Usuario"
+        // DbSet representa uma TABELA no banco.
         public DbSet<Usuario> Usuarios { get; set; }
 
 
